@@ -26,10 +26,13 @@ defmodule Client do
   def handle_call({:tweet, user_info}, _from, state) do
     userid = elem(user_info, 0)
     tweet = elem(user_info, 1)
+    # check for retweet
+    flag = elem(user_info, 2)
     [listOfOldTweets] = :ets.lookup(:Tweets, userid)
     oldTweet = elem(listOfOldTweets, 1)
     newTweet = [tweet | oldTweet]
     process_tweet(tweet)
+
     if(:ets.first(:TweetById) == :"$end_of_table") do
       tweetid = 1
       :ets.insert(:TweetById, {tweetid, userid, tweet})
@@ -39,7 +42,10 @@ defmodule Client do
       :ets.insert(:TweetById, {tweetid, userid, tweet})
     end
 
-    :ets.insert(:Tweets, {userid, newTweet})
+    oldFlags = :ets.lookup_element(:Tweets, userid, 3)
+    newFlag = [flag | oldFlags]
+    :ets.insert(:Tweets, {userid, newTweet, newFlag})
+
     :ets.insert(:User_Wall, {userid, newTweet})
     subscribers = :ets.lookup_element(:Followers, userid, 2)
 
@@ -56,7 +62,7 @@ defmodule Client do
     tweetId = elem(tweet_info, 1)
     userId = elem(tweet_info, 2)
     tweet = GenServer.call(String.to_atom(tweetuser), {:get_tweet_by_Id, {tweetId}})
-    GenServer.call(String.to_atom(tweetuser), {:tweet, {userId, tweet}})
+    GenServer.call(String.to_atom(tweetuser), {:tweet, {userId, tweet, "retweet"}})
     {:reply, {:tweet, tweet}, userState}
   end
 

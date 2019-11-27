@@ -16,20 +16,21 @@ defmodule Simulator do
     add_follower("user1", "user4")
     new_tweet("user1", "tweet from user1")
     new_tweet("user1", "2nd tweet from user1")
-    #get_user_state("user1")
+    get_user_state("user1")
     get_user_state("user2")
-    #add_follower("user2", "user1")
-    #get_user_state("user2")
-    #get_user_state("user4")
+    # add_follower("user2", "user1")
+    # get_user_state("user2")
+    # get_user_state("user4")
     new_tweet("user1", "3rd tweet from user1 #great #amazing @user3")
     get_user_state("user2")
-    #query_by_hashtag("#great")
-    #query_by_hashtag("#amazing")
-    #query_by_mention("@user3")
-    #query_by_id(4)
-    #retweet("user2", "user1", 1)
-    #retweet("user2", "user1", 2)
-    #get_user_state("user1")
+    # query_by_hashtag("#great")
+    # query_by_hashtag("#amazing")
+    # query_by_mention("@user3")
+    # query_by_id(4)
+    retweet("user2", "user1", 1)
+    retweet("user2", "user1", 2)
+    new_tweet("user2", "tweet from user2")
+    # get_user_state("user1")
     new_tweet("user1", "4th tweet user1 #abc")
     get_user_state("user2")
     # login_user("user1", "pass1")
@@ -126,7 +127,7 @@ defmodule Simulator do
 
   def new_tweet(username, tweet) do
     if isUserLoggedIn(username) == true do
-      GenServer.call(String.to_atom(username), {:tweet, {username, tweet}})
+      GenServer.call(String.to_atom(username), {:tweet, {username, tweet, "tweet"}})
       IO.puts("tweet posted")
       true
     else
@@ -174,5 +175,9 @@ defmodule Simulator do
 
   def query_by_id(id) do
     IO.inspect(:ets.lookup(:TweetById, id))
+  end
+
+  def query_by_subscribeduserid(userid, user_subscribed_to) do
+    IO.inspect(:ets.lookup(:TweetById, userid))
   end
 end
