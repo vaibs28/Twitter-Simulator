@@ -125,6 +125,7 @@ defmodule Simulator do
     IO.inspect(:ets.lookup(:Process_Table, "user1"))
   end
 
+  # post a new tweet
   def new_tweet(username, tweet) do
     if isUserLoggedIn(username) == true do
       GenServer.call(String.to_atom(username), {:tweet, {username, tweet, "tweet"}})
@@ -135,10 +136,12 @@ defmodule Simulator do
     end
   end
 
+  # retweet a post
   def retweet(username, tweetuser, tweetid) do
     GenServer.call(String.to_atom(username), {:retweet, {tweetuser, tweetid, username}})
   end
 
+  # prints the user's state including the tweets, followers and the wall
   def get_user_state(username) do
     IO.puts("Tweets by user")
     IO.inspect(:ets.lookup(:Tweets, username))
@@ -148,6 +151,8 @@ defmodule Simulator do
     IO.inspect(:ets.lookup(:User_Wall, username))
   end
 
+  # subscribe to a user
+  @spec add_follower(any, any) :: any
   def add_follower(username, follower) do
     ret = GenServer.call(String.to_atom(username), {:add_follower, {username, follower}})
     ret

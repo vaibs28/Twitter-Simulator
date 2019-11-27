@@ -1,5 +1,5 @@
 defmodule Proj4Test do
-  use ExUnit.Case, async:true
+  use ExUnit.Case
   doctest Proj4
 
   test "register user test1" do
