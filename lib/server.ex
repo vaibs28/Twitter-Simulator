@@ -7,14 +7,14 @@ defmodule Server do
   end
 
   def create_tables() do
-    :ets.new(:Users, [:set, :public, :named_table])
-    :ets.new(:Tweets, [:set, :public, :named_table])
-    :ets.new(:Followers, [:set, :public, :named_table])
-    :ets.new(:UserState, [:set, :public, :named_table])
-    :ets.new(:User_Wall, [:set, :public, :named_table])
-    :ets.new(:Hashtags, [:set, :public, :named_table])
-    :ets.new(:Mentions, [:set, :public, :named_table])
-    :ets.new(:TweetById, [:set, :public, :named_table])
+    :ets.new(:Users, [:set, :public, :named_table])   #stores username and password
+    :ets.new(:Tweets, [:set, :public, :named_table])  #stores username,tweets and tweet/retweet flag
+    :ets.new(:Followers, [:set, :public, :named_table]) #stores username and followers of that user
+    :ets.new(:UserState, [:set, :public, :named_table]) #stores if user is logged in or not
+    :ets.new(:User_Wall, [:set, :public, :named_table]) #stores username and tweets made by other users to which the user is subscribed to
+    :ets.new(:Hashtags, [:set, :public, :named_table])  #stores hashtags and the tweet
+    :ets.new(:Mentions, [:set, :public, :named_table])  #stores mentions and the tweet
+    :ets.new(:TweetById, [:set, :public, :named_table]) #stores tweetId,username,tweet
   end
 
   # register callback
@@ -31,10 +31,9 @@ defmodule Server do
         returnValue = true
         # initializing the tables with no tweets and no followers
         :ets.insert(:Users, {username, password})
-        :ets.insert(:Tweets, {username, []})
+        :ets.insert(:Tweets, {username, [], []})
         :ets.insert(:Followers, {username, []})
         :ets.insert(:UserState, {username, false})
-        # uname, tweet, followers
         :ets.insert(:User_Wall, {username, []})
         {:reply, returnValue, state}
     end
