@@ -9,31 +9,35 @@ defmodule Simulator do
     # login_user("user1", "pass2")
     :ets.new(:Process_Table, [:set, :public, :named_table])
     createAndRegisterusers(num_user)
-    # view_process_table()
     loginAllUsers(num_user)
-    add_follower("user1", "user2")
-    add_follower("user1", "user3")
-    add_follower("user1", "user4")
-    new_tweet("user1", "tweet from user1")
-    new_tweet("user1", "2nd tweet from user1")
-    get_user_state("user1")
-    get_user_state("user2")
+    generate_tweets(num_user, num_msg)
+    # view_process_table()
+    # loginAllUsers(num_user)
+    # add_follower("user1", "user2")
+    # add_follower("user1", "user3")
+    # add_follower("user1", "user4")
+    # new_tweet("user1", "tweet from user1")
+    # new_tweet("user1", "2nd tweet from user1")
+    # get_user_state("user1")
+    # get_user_state("user2")
     # add_follower("user2", "user1")
     # get_user_state("user2")
     # get_user_state("user4")
-    new_tweet("user1", "3rd tweet from user1 #great #amazing @user3")
-    get_user_state("user2")
+    # new_tweet("user1", "3rd tweet from user1 #great #amazing @user3")
+    # get_user_state("user2")
     # query_by_hashtag("#great")
     # query_by_hashtag("#amazing")
     # query_by_mention("@user3")
     # query_by_id(4)
-    retweet("user2", "user1", 1)
-    retweet("user2", "user1", 2)
-    new_tweet("user2", "tweet from user2")
+    # retweet("user2", "user1", 1)
+    # retweet("user2", "user1", 2)
+    # new_tweet("user2", "tweet from user2")
     # get_user_state("user1")
-    new_tweet("user1", "4th tweet user1 #abc")
-    get_user_state("user2")
+    # new_tweet("user1", "4th tweet user1 #abc")
+    # get_user_state("user2")
     # login_user("user1", "pass1")
+    # delete_account("user1")
+    # get_user_state("user1")
   end
 
   def init(state) do
@@ -66,7 +70,6 @@ defmodule Simulator do
   # register a new user with the username if the username does not exist
   def register_user(userName, password) do
     ret = GenServer.call(String.to_atom("server"), {:register_user, {userName, password}})
-
     if(ret == true) do
       IO.puts("registration successful for #{userName}")
     else
@@ -106,7 +109,7 @@ defmodule Simulator do
   def get_tweets(username) do
     if(isUserLoggedIn(username) == true) do
       GenServer.call(String.to_atom("server"), {:get_tweets, {username}})
-      "Successfully fetched"
+      :ets.lookup_element(:Tweets, username,2)
     else
       "Not logged in"
     end
@@ -129,7 +132,7 @@ defmodule Simulator do
   def new_tweet(username, tweet) do
     if isUserLoggedIn(username) == true do
       GenServer.call(String.to_atom(username), {:tweet, {username, tweet, "tweet"}})
-      IO.puts("tweet posted")
+      IO.puts("#{tweet} posted")
       true
     else
       false
@@ -184,5 +187,26 @@ defmodule Simulator do
 
   def query_by_subscribeduserid(userid, user_subscribed_to) do
     IO.inspect(:ets.lookup(:TweetById, userid))
+  end
+
+  # delete account
+  def delete_account(username) do
+    if :ets.delete(:Users, username) == true do
+      "User Deleted"
+    else
+      "Cannot Delete the User"
+    end
+  end
+
+  # generate tweets
+  def generate_tweets(num_user, num_tweets) do
+    for i <- 1..num_user do
+      user = "user" <> "#{i}"
+
+      for j <- 1..num_tweets do
+        tweet = "tweet #{j} from user #{user}"
+        new_tweet(user, tweet)
+      end
+    end
   end
 end

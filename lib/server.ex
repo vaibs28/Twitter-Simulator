@@ -60,7 +60,7 @@ defmodule Server do
         storedPassword = :ets.lookup_element(:Users, username, 2)
 
         if storedPassword === password do
-          {:ok, pid} = GenServer.start_link(Client, username, name: String.to_atom(username))
+          {:ok, _pid} = GenServer.start_link(Client, username, name: String.to_atom(username))
           returnValue = true
           # :ets.insert(:Process_Table, {username, pid})
           # to check if user is logged in or not
@@ -79,7 +79,7 @@ defmodule Server do
   def handle_call({:get_tweets, user_info}, from, _state) do
     username = elem(user_info, 0)
     state = :ets.lookup(:Tweets, username)
-    {:reply, from, state}
+    {:reply, state, from}
   end
 
   # post tweet to subscriber
