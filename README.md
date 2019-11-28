@@ -21,6 +21,8 @@ Twitter simulator in elixir
 6. View the subscribed and made tweets on the user wall
 7. Tweets with hashtags and mentions.
 8. Query the tweets with the hashtags and mentions.
+9. Logout User
+10. Delete User 
 
 ### Functionalities Implemented
 
@@ -46,3 +48,6 @@ The simulator has helper methods for generating and logging in the users as well
 12. Test for querying by hashtag
 13. Test for querying by mention
 14. Test for retweet failure
+15. Test for logout success
+16. Test for logout failure
+17. Test for getting tweets after logout
