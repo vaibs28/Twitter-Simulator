@@ -6,8 +6,10 @@ defmodule Proj4.MixProject do
       app: :proj4,
       version: "0.1.0",
       elixir: "~> 1.9",
-      start_permanent: Mix.env() == :prod,
-      deps: deps()
+      start_permanent: Mix.env == :prod,
+      build_embedded: Mix.env == :prod,
+      deps: deps(),
+      default_task: "run"
     ]
   end
 

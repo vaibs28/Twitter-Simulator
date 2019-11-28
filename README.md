@@ -6,10 +6,10 @@ Twitter simulator in elixir
 2.   Vaibhav Mohan Sahay  :     5454-1830
 
 ### Steps to run the Project:
-   `mix run proj4.exs <num_user> <num_tweets>`
+   `mix run proj4 <num_user> <num_tweets>`
 
 ### Steps to run the Tests:
-    `mix run`
+    `mix test`
 
 ### What is Working
 
