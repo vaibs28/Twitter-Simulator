@@ -62,7 +62,7 @@ defmodule Proj4Test do
 
   test "show tweets by a user success" do
     Simulator.login_user("user1", "pass1")
-    expected = ["tweet from user1 @user2","tweet from user1 #hello", "tweet from user1"]
+    expected = ["tweet from user1 @user2", "tweet from user1 #hello", "tweet from user1"]
     actual = Simulator.get_tweets("user1")
     assert expected == actual
   end
@@ -75,15 +75,27 @@ defmodule Proj4Test do
   end
 
   test "show tweets by user2 after new tweets" do
-    Simulator.new_tweet("vaibhav","first tweet from vaibhav")
-    Simulator.new_tweet("vaibhav","second tweet from vaibhav")
-    expected = ["second tweet from vaibhav","first tweet from vaibhav"]
+    Simulator.new_tweet("vaibhav", "first tweet from vaibhav")
+    Simulator.new_tweet("vaibhav", "second tweet from vaibhav")
+    expected = ["second tweet from vaibhav", "first tweet from vaibhav"]
     actual = Simulator.get_tweets("vaibhav")
     assert expected == actual
   end
 
   test "follow user" do
     assert Simulator.add_follower("user1", "user2") == true
+  end
+
+  test "show followers failure" do
+    expected = ["user10"]
+    actual = Simulator.show_followers("user1")
+    refute expected == actual
+  end
+
+  test "show followers success" do
+    expected = ["user2"]
+    actual = Simulator.show_followers("user1")
+    assert expected = actual
   end
 
   test "query by hashtag failure" do
@@ -112,5 +124,29 @@ defmodule Proj4Test do
     expected = "tweet from user1 @user2"
     actual = Simulator.query_by_mention("@user2")
     assert expected == actual
+  end
+
+  test "retweet success" do
+    actual = Simulator.retweet("vaibhav", "user1", 1)
+    expected = "tweet from user1"
+    assert expected == actual
+  end
+
+  test "retweet success2" do
+    actual = Simulator.retweet("vaibhav", "user1", 2)
+    expected = "tweet from user1 #hello"
+    assert expected == actual
+  end
+
+  test "retweet failure" do
+    actual = Simulator.retweet("vaibhav", "user1", 1)
+    expected = "tweet from user2"
+    refute expected == actual
+  end
+
+  test "retweet failure2" do
+    actual = Simulator.retweet("vaibhav", "user1", 1)
+    expected = "tweet from user2"
+    refute expected == actual
   end
 end

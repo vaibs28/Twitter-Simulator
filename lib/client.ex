@@ -63,7 +63,7 @@ defmodule Client do
     userId = elem(tweet_info, 2)
     tweet = GenServer.call(String.to_atom(tweetuser), {:get_tweet_by_Id, {tweetId}})
     GenServer.call(String.to_atom(tweetuser), {:tweet, {userId, tweet, "retweet"}})
-    {:reply, {:tweet, tweet}, userState}
+    {:reply, tweet, userState}
   end
 
   def handle_call({:get_tweet_by_Id, new_message}, _from, userState) do

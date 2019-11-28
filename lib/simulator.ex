@@ -70,6 +70,7 @@ defmodule Simulator do
   # register a new user with the username if the username does not exist
   def register_user(userName, password) do
     ret = GenServer.call(String.to_atom("server"), {:register_user, {userName, password}})
+
     if(ret == true) do
       IO.puts("registration successful for #{userName}")
     else
@@ -109,7 +110,7 @@ defmodule Simulator do
   def get_tweets(username) do
     if(isUserLoggedIn(username) == true) do
       GenServer.call(String.to_atom("server"), {:get_tweets, {username}})
-      :ets.lookup_element(:Tweets, username,2)
+      :ets.lookup_element(:Tweets, username, 2)
     else
       "Not logged in"
     end
@@ -141,7 +142,8 @@ defmodule Simulator do
 
   # retweet a post
   def retweet(username, tweetuser, tweetid) do
-    GenServer.call(String.to_atom(username), {:retweet, {tweetuser, tweetid, username}})
+    ret = GenServer.call(String.to_atom(username), {:retweet, {tweetuser, tweetid, username}})
+    ret
   end
 
   # prints the user's state including the tweets, followers and the wall
@@ -152,6 +154,10 @@ defmodule Simulator do
     IO.inspect(:ets.lookup(:Followers, username))
     IO.puts("User Wall")
     IO.inspect(:ets.lookup(:User_Wall, username))
+  end
+
+  def show_followers(user) do
+    :ets.lookup_element(:Followers, user, 2)
   end
 
   # subscribe to a user
