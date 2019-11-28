@@ -92,25 +92,32 @@ defmodule Server do
       [listOfOldTweets] = :ets.lookup(:User_Wall, subscriber)
       oldTweet = elem(listOfOldTweets, 1)
       newTweet = [tweet | oldTweet]
+
       if Simulator.isUserLoggedIn(subscriber) do
         IO.puts("#{subscriber} received tweet #{tweet}")
       end
+
       :ets.insert(:User_Wall, {subscriber, newTweet})
     end)
 
     {:reply, from, state}
   end
 
-  #logout
+  # logout
 
-  def handle_call({:logout,user},_from, state) do
-    username = elem(user,0)
+  def handle_call({:logout, user}, _from, state) do
+    username = elem(user, 0)
     IO.inspect(username)
+
     if(Simulator.isUserLoggedIn(username) == true) do
-        pid = :ets.lookup_element(:Process_Table,username,2)
-        IO.inspect  pid
-        GenServer.stop(pid, :normal)
+      pid = :ets.lookup_element(:Process_Table, username, 2)
+      IO.inspect(pid)
+      GenServer.stop(pid, :normal)
+      ret = true
+      {:reply, ret, state}
+    else
+      ret = false
+      {:reply, ret, state}
     end
-    {:reply,true,state}
-end
+  end
 end

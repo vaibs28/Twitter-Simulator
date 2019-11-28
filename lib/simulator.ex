@@ -10,27 +10,26 @@ defmodule Simulator do
 
     createAndRegisterusers(num_user)
     loginAllUsers(num_user)
-    logout_all_users(num_user)
-    IO.inspect(isUserLoggedIn("user500"))
-    login_user("user500", "pass500")
+    # logout_all_users(num_user)
+    # IO.inspect(isUserLoggedIn("user500"))
+    # login_user("user500", "pass500")
     view_process_table()
 
-    # for i <- 1..num_user do
-    #  user1 = "user#{i}"
+    for i <- 1..num_user do
+      user1 = "user#{i}"
 
-    #  for j <- 2..num_user do
-    #    user2 = "user#{j}"
-    #    add_follower(user1, user2)
-    #  end
-    # end
+      for j <- 2..num_user do
+        user2 = "user#{j}"
+        add_follower(user1, user2)
+      end
+    end
 
     generate_tweets(num_user, num_msg)
 
-    get_user_state("user500")
-    # for i <- 1..num_user do
-    #  user = "user#{i}"
-    #  get_user_state(user)
-    # end
+    for i <- 1..num_user do
+      user = "user#{i}"
+      get_user_state(user)
+    end
 
     # view_process_table()
     # loginAllUsers(num_user)
@@ -248,9 +247,20 @@ defmodule Simulator do
       GenServer.call(String.to_atom("server"), {:logout, {user}})
       ret = true
       IO.inspect("" <> user <> " logout successful")
-      :ets.insert(:UserState,{user,false})
+      :ets.insert(:UserState, {user, false})
       ret
     end
+  end
+
+  def logout_user(username) do
+    ret = GenServer.call(String.to_atom("server"), {:logout, {username}})
+
+    if ret == true do
+      IO.inspect("" <> username <> " logout successful")
+      :ets.insert(:UserState, {username, false})
+    end
+
+    ret
   end
 
   # generate tweets

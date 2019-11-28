@@ -149,4 +149,28 @@ defmodule Proj4Test do
     expected = "tweet from user2"
     refute expected == actual
   end
+
+  test "logout success" do
+    actual = Simulator.logout_user("vaibhav")
+    expected = true
+    assert actual == expected
+  end
+
+  test "post tweet after logout" do
+    actual = Simulator.new_tweet("vaibhav", "tweet after logout")
+    expected = false
+    assert actual == expected
+  end
+
+  test "view tweets after logout" do
+    expected = "Not logged in"
+    actual = Simulator.get_tweets("vaibhav")
+    assert expected == actual
+  end
+
+  test "logout failure" do
+    actual = Simulator.logout_user("vaibhav1")
+    expected = true
+    refute actual == expected
+  end
 end
