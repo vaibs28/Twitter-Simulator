@@ -9,7 +9,7 @@ Twitter simulator in elixir
    `mix run proj4.exs <num_user> <num_tweets>`
 
 ### Steps to run the Tests:
-    `mix test`
+    `mix run`
 
 ### What is Working
 
