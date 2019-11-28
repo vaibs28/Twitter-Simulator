@@ -7,10 +7,31 @@ defmodule Simulator do
     # start simulation
     # register_user("user1", "pass1")
     # login_user("user1", "pass2")
-    :ets.new(:Process_Table, [:set, :public, :named_table])
+
     createAndRegisterusers(num_user)
     loginAllUsers(num_user)
+    logout_all_users(num_user)
+    IO.inspect(isUserLoggedIn("user500"))
+    login_user("user500", "pass500")
+    view_process_table()
+
+    # for i <- 1..num_user do
+    #  user1 = "user#{i}"
+
+    #  for j <- 2..num_user do
+    #    user2 = "user#{j}"
+    #    add_follower(user1, user2)
+    #  end
+    # end
+
     generate_tweets(num_user, num_msg)
+
+    get_user_state("user500")
+    # for i <- 1..num_user do
+    #  user = "user#{i}"
+    #  get_user_state(user)
+    # end
+
     # view_process_table()
     # loginAllUsers(num_user)
     # add_follower("user1", "user2")
@@ -80,13 +101,21 @@ defmodule Simulator do
     ret
   end
 
+  def is_user_registered(username) do
+    if :ets.lookup(:Users, username) != [] do
+      true
+    else
+      false
+    end
+  end
+
   # login user with the passed credentials
   def login_user(userName, password) do
-    if :ets.lookup(:UserState, userName) == [] do
+    if is_user_registered(userName) == false do
       false
     else
       currentUserState = :ets.lookup_element(:UserState, userName, 2)
-
+      # not logged in
       if(currentUserState == false) do
         ret = GenServer.call(String.to_atom("server"), {:login_user, {userName, password}})
 
@@ -118,7 +147,10 @@ defmodule Simulator do
 
   # return the logged in state , return true if logged in else returns false
   def isUserLoggedIn(username) do
-    if(:ets.lookup(:UserState, username) == []) do
+    if(
+      :ets.lookup(:UserState, username) == [] ||
+        :ets.lookup_element(:UserState, username, 2) == false
+    ) do
       false
     else
       :ets.lookup_element(:UserState, username, 2)
@@ -126,7 +158,7 @@ defmodule Simulator do
   end
 
   def view_process_table() do
-    IO.inspect(:ets.lookup(:Process_Table, "user1"))
+    IO.inspect(:ets.tab2list(:Process_Table))
   end
 
   # post a new tweet
@@ -164,6 +196,11 @@ defmodule Simulator do
   @spec add_follower(any, any) :: any
   def add_follower(username, follower) do
     ret = GenServer.call(String.to_atom(username), {:add_follower, {username, follower}})
+
+    if(ret == true) do
+      IO.puts("#{follower} subscribed to #{username}")
+    end
+
     ret
   end
 
@@ -201,6 +238,18 @@ defmodule Simulator do
       "User Deleted"
     else
       "Cannot Delete the User"
+    end
+  end
+
+  # logout all users
+  def logout_all_users(num_user) do
+    for i <- 1..num_user do
+      user = "user" <> "#{i}"
+      GenServer.call(String.to_atom("server"), {:logout, {user}})
+      ret = true
+      IO.inspect("" <> user <> " logout successful")
+      :ets.insert(:UserState,{user,false})
+      ret
     end
   end
 

@@ -2,7 +2,7 @@ defmodule Client do
   use GenServer
 
   def start_link(opts) do
-    {:ok, opts}
+    GenServer.start_link(__MODULE__,opts)
   end
 
   def process_tweet(tweet) do
@@ -23,7 +23,7 @@ defmodule Client do
     end)
   end
 
-  def handle_call({:tweet, user_info}, _from, state) do
+  def handle_call({:tweet, user_info}, from, state) do
     userid = elem(user_info, 0)
     tweet = elem(user_info, 1)
     # check for retweet
@@ -51,7 +51,8 @@ defmodule Client do
 
     GenServer.call(
       String.to_atom("server"),
-      {:post_tweet_to_subscribers, {userid, tweet, subscribers}}
+      {:post_tweet_to_subscribers, {userid, tweet, subscribers}},
+      :infinity
     )
 
     {:reply, tweet, state}
