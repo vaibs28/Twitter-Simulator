@@ -72,9 +72,9 @@ defmodule Client do
     if(Server.isUserLoggedIn(username) == true) do
       GenServer.call(String.to_atom(username), {:tweet, {username, tweet, "tweet"}})
       IO.puts("#{tweet} posted")
-      true
+      {true, "Success"}
     else
-      false
+      {false, "User not logged in"}
     end
   end
 
