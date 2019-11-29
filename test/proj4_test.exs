@@ -142,6 +142,73 @@ defmodule Proj4Test do
     {success, message} = Client.add_follower("user1", "user2")
     assert !success
     assert message === "Already Subscribed"
+  end
 
+  test "tweet test" do
+    GenServer.start_link(Server, [1, 1], name: :server)
+
+    Client.register("user1", "pass1")
+    Client.login("user1", "pass1")
+
+    {success, message} = Client.tweet("user1", "Hello World")
+    assert success
+    assert message === "Success"
+
+    assert :ets.lookup_element(:Tweets, "user1", 2) == ["Hello World"]
+    assert :ets.lookup_element(:Tweets, "user1", 3) == ["tweet"]
+    assert :ets.lookup_element(:TweetById, 1, 2) == "user1"
+    assert :ets.lookup_element(:TweetById, 1, 3) == "Hello World"
+  end
+
+  test "tweet with hashtag" do
+    GenServer.start_link(Server, [1, 1], name: :server)
+
+    Client.register("user1", "pass1")
+    Client.login("user1", "pass1")
+
+    Client.tweet("user1", "#Hello #Hello #World")
+    Client.tweet("user1", "#Hello Vaibhav")
+
+    assert :ets.lookup_element(:Tweets, "user1", 2) |> length == 2
+
+    assert :ets.lookup_element(:Hashtags, "Hello", 2) === [
+             "#Hello Vaibhav",
+             "#Hello #Hello #World"
+           ]
+
+    assert :ets.lookup_element(:Hashtags, "World", 2) === [
+             "#Hello #Hello #World"
+           ]
+  end
+
+  test "tweet with mention" do
+    GenServer.start_link(Server, [1, 1], name: :server)
+
+    Client.register("user1", "pass1")
+    Client.register("user2", "pass2")
+    Client.register("user3", "pass3")
+    Client.login("user1", "pass1")
+    Client.login("user2", "pass2")
+
+    Client.tweet("user1", "@user2 @user3 This is awesome, and @user2 you should check this out")
+    Client.tweet("user2", "@user1 @user3 Yes User1")
+
+    assert :ets.lookup_element(:Tweets, "user1", 2) |> length == 1
+    assert :ets.lookup_element(:Tweets, "user2", 2) |> length == 1
+
+    assert :ets.tab2list(:TweetById) |> length == 2
+
+    assert :ets.lookup_element(:Mentions, "user1", 2) === [
+      "@user1 @user3 Yes User1"
+    ]
+
+    assert :ets.lookup_element(:Mentions, "user2", 2) === [
+      "@user2 @user3 This is awesome, and @user2 you should check this out"
+    ]
+
+    assert :ets.lookup_element(:Mentions, "user3", 2) === [
+      "@user1 @user3 Yes User1",
+      "@user2 @user3 This is awesome, and @user2 you should check this out"
+    ]
   end
 end

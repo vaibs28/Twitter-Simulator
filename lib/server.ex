@@ -37,7 +37,6 @@ defmodule Server do
   def handle_call({:add_follower, {username, follower}}, _from, state) do
     if Enum.member?(:ets.lookup_element(:SubscribedTo, follower, 2), username) do
       {:reply, {false, "Already Subscribed"}, state}
-
     else
       [subscribedList] = :ets.lookup(:SubscribedTo, follower)
       oldsubscriber = elem(subscribedList, 1)
@@ -192,14 +191,34 @@ defmodule Server do
 
   def process_tweet(tweet) do
     {:ok, hashtag} = Regex.compile("#[^#@\\s]*")
+    hashtags = Enum.uniq(Regex.scan(hashtag, tweet))
+
+    Enum.each(hashtags, fn [hashtag] ->
+      hashtag = String.slice(hashtag, 1..-1)
+      previous =
+        if :ets.member(:Hashtags, hashtag) do
+          :ets.lookup_element(:Hashtags, hashtag, 2)
+        else
+          []
+        end
+
+      :ets.insert(:Hashtags, {hashtag, [tweet | previous]})
+    end)
+
     {:ok, mention} = Regex.compile("@[^#@\\s]*")
-    hashtags = Regex.scan(hashtag, tweet)
+    mentions = Enum.uniq(Regex.scan(mention, tweet))
 
-    Enum.each(hashtags, fn [hashtag] -> :ets.insert(:Hashtags, {hashtag, tweet}) end)
+    Enum.each(mentions, fn [mention] ->
+      mention = String.slice(mention, 1..-1)
+      previous =
+        if :ets.member(:Mentions, mention) do
+          :ets.lookup_element(:Mentions, mention, 2)
+        else
+          []
+        end
 
-    mentions = Regex.scan(mention, tweet)
-
-    Enum.each(mentions, fn [mention] -> :ets.insert(:Mentions, {mention, tweet}) end)
+      :ets.insert(:Mentions, {mention, [tweet | previous]})
+    end)
   end
 
   # return the logged in state , return true if logged in else returns false
