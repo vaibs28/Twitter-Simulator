@@ -17,7 +17,7 @@ defmodule Server do
     :ets.new(:UserState, [:set, :protected, :named_table])
     # {username, tweets[](Tweets of user have subscribed to)}
     # stores username and tweets made by other users to which the user is subscribed to
-    :ets.new(:User_Wall, [:set, :protected, :named_table])
+    :ets.new(:Notifications, [:set, :protected, :named_table])
     # {hashtag, tweets[]}
     # stores hashtags and the tweet
     :ets.new(:Hashtags, [:set, :protected, :named_table])
@@ -67,7 +67,7 @@ defmodule Server do
         :ets.insert(:Tweets, {username, [], []})
         :ets.insert(:Followers, {username, []})
         :ets.insert(:UserState, {username, false})
-        :ets.insert(:User_Wall, {username, []})
+        :ets.insert(:Notifications, {username, []})
         :ets.insert(:SubscribedTo, {username, []})
         {:reply, {true, "Registration successful"}, state}
     end
@@ -177,7 +177,7 @@ defmodule Server do
 
   def post_tweet_to_subscribers(tweet, subscribers) do
     Enum.each(subscribers, fn subscriber ->
-      [listOfOldTweets] = :ets.lookup(:User_Wall, subscriber)
+      [listOfOldTweets] = :ets.lookup(:Notifications, subscriber)
       oldTweet = elem(listOfOldTweets, 1)
       newTweet = [tweet | oldTweet]
 
@@ -185,7 +185,7 @@ defmodule Server do
         IO.puts("#{subscriber} received tweet #{tweet}")
       end
 
-      :ets.insert(:User_Wall, {subscriber, newTweet})
+      :ets.insert(:Notifications, {subscriber, newTweet})
     end)
   end
 
