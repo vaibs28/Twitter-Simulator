@@ -185,7 +185,9 @@ defmodule Server do
         IO.puts("#{subscriber} received tweet #{tweet}")
       end
 
-      :ets.insert(:Notifications, {subscriber, newTweet})
+      if(isUserLoggedIn(subscriber) == true) do
+        :ets.insert(:Notifications, {subscriber, newTweet})
+      end
     end)
   end
 
@@ -195,6 +197,7 @@ defmodule Server do
 
     Enum.each(hashtags, fn [hashtag] ->
       hashtag = String.slice(hashtag, 1..-1)
+
       previous =
         if :ets.member(:Hashtags, hashtag) do
           :ets.lookup_element(:Hashtags, hashtag, 2)
@@ -210,6 +213,7 @@ defmodule Server do
 
     Enum.each(mentions, fn [mention] ->
       mention = String.slice(mention, 1..-1)
+
       previous =
         if :ets.member(:Mentions, mention) do
           :ets.lookup_element(:Mentions, mention, 2)
