@@ -114,26 +114,43 @@ defmodule Server do
     [listOfOldTweets] = :ets.lookup(:Tweets, userid)
     oldTweet = elem(listOfOldTweets, 1)
     newTweet = [tweet | oldTweet]
-    process_tweet(tweet)
+    {all_registered, message} = process_tweet(tweet)
 
-    if(:ets.first(:TweetById) == :"$end_of_table") do
-      tweetid = 1
-      :ets.insert(:TweetById, {tweetid, userid, tweet})
+    if all_registered do
+      if(:ets.first(:TweetById) == :"$end_of_table") do
+        tweetid = 1
+        :ets.insert(:TweetById, {tweetid, userid, tweet})
+      else
+        tweetid = :ets.last(:TweetById)
+        tweetid = tweetid + 1
+        :ets.insert(:TweetById, {tweetid, userid, tweet})
+      end
+
+      oldFlags = :ets.lookup_element(:Tweets, userid, 3)
+      newFlag = [flag | oldFlags]
+      :ets.insert(:Tweets, {userid, newTweet, newFlag})
+
+      subscribers = :ets.lookup_element(:Followers, userid, 2)
+
+      post_tweet_to_subscribers(tweet, subscribers)
+
+      {:reply, {true, tweet}, state}
     else
-      tweetid = :ets.last(:TweetById)
-      tweetid = tweetid + 1
-      :ets.insert(:TweetById, {tweetid, userid, tweet})
+      {:reply, {false, message}, state}
     end
+  end
 
-    oldFlags = :ets.lookup_element(:Tweets, userid, 3)
-    newFlag = [flag | oldFlags]
-    :ets.insert(:Tweets, {userid, newTweet, newFlag})
+  def handle_call({:query_by_subscribed_user, user, search}, _from, state) do
+    result =
+      Enum.reduce(
+        Enum.map(:ets.lookup_element(:SubscribedTo, user, 2), fn user ->
+          :ets.lookup_element(:Tweets, user, 2)
+        end),
+        [],
+        fn tweets, acc -> tweets ++ acc end
+      )
 
-    subscribers = :ets.lookup_element(:Followers, userid, 2)
-
-    post_tweet_to_subscribers(tweet, subscribers)
-
-    {:reply, tweet, state}
+    {:reply, Enum.filter(result, fn x -> String.contains?(x, search) end), state}
   end
 
   # login callback
@@ -192,37 +209,50 @@ defmodule Server do
   end
 
   def process_tweet(tweet) do
-    {:ok, hashtag} = Regex.compile("#[^#@\\s]*")
-    hashtags = Enum.uniq(Regex.scan(hashtag, tweet))
-
-    Enum.each(hashtags, fn [hashtag] ->
-      hashtag = String.slice(hashtag, 1..-1)
-
-      previous =
-        if :ets.member(:Hashtags, hashtag) do
-          :ets.lookup_element(:Hashtags, hashtag, 2)
-        else
-          []
-        end
-
-      :ets.insert(:Hashtags, {hashtag, [tweet | previous]})
-    end)
-
     {:ok, mention} = Regex.compile("@[^#@\\s]*")
     mentions = Enum.uniq(Regex.scan(mention, tweet))
 
-    Enum.each(mentions, fn [mention] ->
-      mention = String.slice(mention, 1..-1)
+    mentions =
+      Enum.map(mentions, fn [m] ->
+        String.slice(m, 1..-1)
+      end)
 
-      previous =
-        if :ets.member(:Mentions, mention) do
-          :ets.lookup_element(:Mentions, mention, 2)
-        else
-          []
-        end
+    all_registered = Enum.all?(mentions, fn n -> :ets.member(:Users, n) end)
 
-      :ets.insert(:Mentions, {mention, [tweet | previous]})
-    end)
+    if all_registered do
+      Enum.each(mentions, fn mention ->
+        previous =
+          if :ets.member(:Mentions, mention) do
+            :ets.lookup_element(:Mentions, mention, 2)
+          else
+            []
+          end
+
+        :ets.insert(:Mentions, {mention, [tweet | previous]})
+      end)
+
+      post_tweet_to_subscribers(tweet, mentions)
+
+      {:ok, hashtag} = Regex.compile("#[^#@\\s]*")
+      hashtags = Enum.uniq(Regex.scan(hashtag, tweet))
+
+      Enum.each(hashtags, fn [hashtag] ->
+        hashtag = String.slice(hashtag, 1..-1)
+
+        previous =
+          if :ets.member(:Hashtags, hashtag) do
+            :ets.lookup_element(:Hashtags, hashtag, 2)
+          else
+            []
+          end
+
+        :ets.insert(:Hashtags, {hashtag, [tweet | previous]})
+      end)
+
+      {true, ""}
+    else
+      {false, "All users not registered"}
+    end
   end
 
   # return the logged in state , return true if logged in else returns false

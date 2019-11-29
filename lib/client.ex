@@ -34,17 +34,25 @@ defmodule Client do
     GenServer.call(:server, {:query_by_mention, mention})
   end
 
+  def query_by_subscribed_user(user, search) do
+    GenServer.call(String.to_atom(user), {:query_by_subscribed_user, user, search})
+  end
+
   def add_follower(username, follower) do
     GenServer.call(String.to_atom(username), {:add_follower, {username, follower}})
+  end
+
+  def handle_call({:query_by_subscribed_user, user, search}, _from, state) do
+    {:reply, GenServer.call(:server, {:query_by_subscribed_user, user, search}), state}
   end
 
   def handle_call({:show_followers, username}, _from, state) do
     {:reply, GenServer.call(:server, {:show_followers, username}), state}
   end
 
-  def handle_call({:retweet, {tweetuser, tweetId, userId}}, _from, userState) do
-    tweet = GenServer.call(String.to_atom(tweetuser), {:get_tweet_by_Id, {tweetId}})
-    GenServer.call(String.to_atom(tweetuser), {:tweet, {userId, tweet, "retweet"}})
+  def handle_call({:retweet, {tweetId, userId}}, _from, userState) do
+    tweet = GenServer.call(:server, {:get_tweet_by_id, tweetId})
+    GenServer.call(:server, {:tweet, {userId, tweet, "retweet"}}, :infinity)
     {:reply, tweet, userState}
   end
 
@@ -70,20 +78,22 @@ defmodule Client do
 
   def tweet(username, tweet) do
     if(Server.isUserLoggedIn(username) == true) do
-      GenServer.call(String.to_atom(username), {:tweet, {username, tweet, "tweet"}})
-      IO.puts("#{tweet} posted")
-      {true, "Success"}
+      {success, message} =
+        GenServer.call(String.to_atom(username), {:tweet, {username, tweet, "tweet"}})
+
+      if success do
+        IO.puts("#{tweet} posted")
+        {true, "Success"}
+      else
+        {false, message}
+      end
     else
       {false, "User not logged in"}
     end
   end
 
   def delete(username) do
-    if(Client.is_user_registered(username)) do
-      GenServer.call(:server, {:delete, username})
-    else
-      "user not registered"
-    end
+    GenServer.call(:server, {:delete, username})
   end
 
   def is_user_registered(username) do
@@ -113,13 +123,8 @@ defmodule Client do
     end
   end
 
-  def retweet(username, tweetuser, tweetid) do
-    if(Server.isUserLoggedIn(username)==true) do
-      GenServer.call(String.to_atom(username), {:retweet, {tweetuser, tweetid, username}})
-    else
-      "User not logged in"
-    end
-
+  def retweet(username, tweetid) do
+    GenServer.call(String.to_atom(username), {:retweet, {tweetid, username}})
   end
 
   def get_tweets(username) do
@@ -132,9 +137,9 @@ defmodule Client do
 
   def logout(username) do
     if Process.whereis(String.to_atom(username)) == nil do
-      false
+      {false, "User not logged in"}
     else
-      GenServer.call(String.to_atom(username), {:logout, username})
+      {GenServer.call(String.to_atom(username), {:logout, username}), "Logout successful"}
     end
   end
 end

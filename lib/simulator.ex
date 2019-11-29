@@ -39,7 +39,7 @@ defmodule Simulator do
     IO.puts("User Subscribed To")
     IO.inspect(:ets.lookup(:SubscribedTo, username))
     IO.puts("User Wall")
-    IO.inspect(:ets.lookup(:User_Wall, username))
+    IO.inspect(:ets.lookup(:Notifications, username))
   end
 
   # create users based on the num_user and register them

@@ -87,6 +87,28 @@ defmodule Proj4Test do
     assert message === "Password incorrect"
   end
 
+  test "logout test" do
+    GenServer.start_link(Server, [1, 1], name: :server)
+    Client.register("user1", "pass1")
+    Client.login("user1", "pass1")
+
+    {success, message} = Client.logout("user1")
+
+    assert success
+    assert message === "Logout successful"
+    assert :ets.lookup_element(:UserState, "user1", 2) == false
+  end
+
+  test "not logged in test" do
+    GenServer.start_link(Server, [1, 1], name: :server)
+    Client.register("user1", "pass1")
+
+    {success, message} = Client.logout("user1")
+
+    assert !success
+    assert message === "User not logged in"
+  end
+
   test "unsuccessful subscribe test" do
     GenServer.start_link(Server, [1, 1], name: :server)
     Client.register("user1", "pass1")
@@ -181,6 +203,16 @@ defmodule Proj4Test do
            ]
   end
 
+  test "mentioned user not found test" do
+    GenServer.start_link(Server, [1, 1], name: :server)
+    Client.register("user1", "pass1")
+    Client.login("user1", "pass1")
+
+    {success, message} = Client.tweet("user1", "@user2 check this out")
+    assert !success
+    IO.inspect(message)
+  end
+
   test "tweet with mention" do
     GenServer.start_link(Server, [1, 1], name: :server)
 
@@ -199,16 +231,97 @@ defmodule Proj4Test do
     assert :ets.tab2list(:TweetById) |> length == 2
 
     assert :ets.lookup_element(:Mentions, "user1", 2) === [
-      "@user1 @user3 Yes User1"
-    ]
+             "@user1 @user3 Yes User1"
+           ]
 
     assert :ets.lookup_element(:Mentions, "user2", 2) === [
-      "@user2 @user3 This is awesome, and @user2 you should check this out"
-    ]
+             "@user2 @user3 This is awesome, and @user2 you should check this out"
+           ]
 
     assert :ets.lookup_element(:Mentions, "user3", 2) === [
-      "@user1 @user3 Yes User1",
-      "@user2 @user3 This is awesome, and @user2 you should check this out"
-    ]
+             "@user1 @user3 Yes User1",
+             "@user2 @user3 This is awesome, and @user2 you should check this out"
+           ]
+  end
+
+  test "retweet test" do
+    GenServer.start_link(Server, [1, 1], name: :server)
+
+    Client.register("user1", "pass1")
+    Client.register("user2", "pass2")
+    Client.register("user3", "pass3")
+
+    Client.login("user1", "pass1")
+    Client.login("user2", "pass2")
+
+    {_, _} = Client.add_follower("user1", "user2")
+    {_, _} = Client.add_follower("user2", "user3")
+
+    Client.tweet("user1", "Hello World")
+    Client.retweet("user2", 1)
+
+    assert :ets.lookup_element(:Tweets, "user1", 2) == ["Hello World"]
+    assert :ets.lookup_element(:Tweets, "user1", 3) == ["tweet"]
+
+    assert :ets.lookup_element(:Tweets, "user2", 2) == ["Hello World"]
+    assert :ets.lookup_element(:Tweets, "user2", 3) == ["retweet"]
+
+    assert :ets.lookup_element(:Notifications, "user2", 2) == ["Hello World"]
+    assert :ets.lookup_element(:Notifications, "user3", 2) == []
+  end
+
+  test "query by hashtag test" do
+    GenServer.start_link(Server, [1, 1], name: :server)
+
+    Client.register("user1", "pass1")
+    Client.register("user2", "pass2")
+
+    Client.login("user1", "pass1")
+    Client.login("user2", "pass2")
+
+    Client.tweet("user1", "#Hello #World 123")
+    Client.tweet("user2", "#OkGoogle #Hello 1234")
+
+    assert Client.query_by_hashtag("OkGoogle") === ["#OkGoogle #Hello 1234"]
+    assert Client.query_by_hashtag("Hello") === ["#OkGoogle #Hello 1234", "#Hello #World 123"]
+    assert Client.query_by_hashtag("World") === ["#Hello #World 123"]
+  end
+
+  test "query by mentions test" do
+    GenServer.start_link(Server, [1, 1], name: :server)
+
+    Client.register("user1", "pass1")
+    Client.register("user2", "pass2")
+
+    Client.login("user1", "pass1")
+    Client.login("user2", "pass2")
+
+    Client.tweet("user1", "@user2 123")
+    Client.tweet("user2", "@user1 567")
+
+    assert Client.query_by_mention("user1") === ["@user1 567"]
+    assert Client.query_by_mention("user2") === ["@user2 123"]
+  end
+
+  test "query from tweets subscribed to" do
+    GenServer.start_link(Server, [1, 1], name: :server)
+
+    Client.register("user1", "pass1")
+    Client.register("user2", "pass2")
+    Client.register("user3", "pass3")
+
+    Client.login("user1", "pass1")
+    Client.login("user2", "pass2")
+    Client.login("user3", "pass3")
+
+    Client.add_follower("user1", "user2")
+    Client.add_follower("user3", "user2")
+
+    Client.tweet("user1", "Hello World")
+    Client.tweet("user1", "Amazing World")
+    Client.tweet("user3", "Hi, This is my World")
+
+    assert Enum.sort(["Hello World", "Amazing World", "Hi, This is my World"]) === Enum.sort(Client.query_by_subscribed_user("user2", "World"))
+    assert Client.query_by_subscribed_user("user2", "Amazing") === ["Amazing World"]
   end
 end
