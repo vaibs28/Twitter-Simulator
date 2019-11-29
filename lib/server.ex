@@ -7,117 +7,210 @@ defmodule Server do
   end
 
   def create_tables() do
-    # stores username and password
+    # {username, password}
     :ets.new(:Users, [:set, :public, :named_table])
-    # stores username,tweets and tweet/retweet flag
+    # {username, tweets[], retweet_flag[]}
     :ets.new(:Tweets, [:set, :public, :named_table])
-    # stores username and followers of that user
+    # {username, followers[]}
     :ets.new(:Followers, [:set, :public, :named_table])
-    # stores if user is logged in or not
+    # {username, isLoggedIn(Boolean)}
     :ets.new(:UserState, [:set, :public, :named_table])
+    # {username, tweets[](Tweets of user have subscribed to)}
     # stores username and tweets made by other users to which the user is subscribed to
     :ets.new(:User_Wall, [:set, :public, :named_table])
+    # {hashtag, tweets[]}
     # stores hashtags and the tweet
     :ets.new(:Hashtags, [:set, :public, :named_table])
+    # {username, tweets[]}
     # stores mentions and the tweet
     :ets.new(:Mentions, [:set, :public, :named_table])
     # stores tweetId,username,tweet
     :ets.new(:TweetById, [:set, :public, :named_table])
-    # stores the username and the notification when mentioned in the tweet
-    :ets.new(:Notifications, [:set, :public, :named_table])
     :ets.new(:Process_Table, [:set, :public, :named_table])
+    :ets.new(:SubscribedTo, [:set, :public, :named_table])
+  end
+
+  def handle_call({:show_followers, user}, _from, state) do
+    {:reply, :ets.lookup_element(:Followers, user, 2), state}
+  end
+
+  def handle_call({:add_follower, {username, follower}}, _from, state) do
+    if Enum.member?(:ets.lookup_element(:SubscribedTo, follower, 2), username) do
+      {:reply, {false, "Already Subscribed"}, state}
+
+    else
+      [subscribedList] = :ets.lookup(:SubscribedTo, follower)
+      oldsubscriber = elem(subscribedList, 1)
+      newsubscriber = [username | oldsubscriber]
+      :ets.insert(:SubscribedTo, {follower, newsubscriber})
+
+      [listOfFollowers] = :ets.lookup(:Followers, username)
+      oldFollower = elem(listOfFollowers, 1)
+      newFollower = [follower | oldFollower]
+      :ets.insert(:Followers, {username, newFollower})
+      {:reply, {true, "Success"}, state}
+    end
+  end
+
+  def handle_call({:get_tweet_by_id, tweet_id}, _from, state) do
+    {:reply, :ets.lookup_element(:TweetById, tweet_id, 3), state}
   end
 
   # register callback
-  def handle_call({:register_user, user_info}, _from, state) do
-    username = elem(user_info, 0)
-    password = elem(user_info, 1)
-    returnValue = false
-
+  def handle_call({:register_user, {username, password}}, _from, state) do
     case :ets.lookup(:Users, username) do
       [_] ->
-        {:reply, returnValue, state}
+        {:reply, {false, "User already registered"}, state}
 
       [] ->
-        returnValue = true
         # initializing the tables with no tweets and no followers
         :ets.insert(:Users, {username, password})
         :ets.insert(:Tweets, {username, [], []})
         :ets.insert(:Followers, {username, []})
         :ets.insert(:UserState, {username, false})
         :ets.insert(:User_Wall, {username, []})
-        {:reply, returnValue, state}
+        :ets.insert(:SubscribedTo, {username, []})
+        {:reply, {true, "Registration successful"}, state}
     end
   end
 
-  # login callback
-  def handle_call({:login_user, user_info}, _from, state) do
-    username = elem(user_info, 0)
-    password = elem(user_info, 1)
-    returnValue = false
+  def handle_call({:is_logged_in, username}, _from, state) do
+    {:reply, :ets.lookup_element(:UserState, username, 2), state}
+  end
 
+  def handle_call({:is_user_registered, username}, _from, state) do
+    {:reply, :ets.lookup(:Users, username) != [], state}
+  end
+
+  def handle_call({:delete, username}, _from, state) do
+    if :ets.lookup(:Users, username) != [] do
+      :ets.delete(:Users, username)
+      {:reply, {true, "User Deleted"}, state}
+    else
+      {:reply, {false, "No user to delete"}, state}
+    end
+  end
+
+  def handle_call({:query_by_hashtag, hashtag}, _from, state) do
+    result =
+      if :ets.lookup(:Hashtags, hashtag) == [] do
+        []
+      else
+        :ets.lookup_element(:Hashtags, hashtag, 2)
+      end
+
+    {:reply, result, state}
+  end
+
+  def handle_call({:query_by_mention, mention}, _from, state) do
+    if :ets.lookup(:Mentions, mention) == [] do
+      {:reply, "mention not found", state}
+    else
+      {:reply, :ets.lookup_element(:Mentions, mention, 2), state}
+    end
+  end
+
+  def handle_call({:tweet, {userid, tweet, flag}}, _from, state) do
+    # check for retweet
+    [listOfOldTweets] = :ets.lookup(:Tweets, userid)
+    oldTweet = elem(listOfOldTweets, 1)
+    newTweet = [tweet | oldTweet]
+    process_tweet(tweet)
+
+    if(:ets.first(:TweetById) == :"$end_of_table") do
+      tweetid = 1
+      :ets.insert(:TweetById, {tweetid, userid, tweet})
+    else
+      tweetid = :ets.last(:TweetById)
+      tweetid = tweetid + 1
+      :ets.insert(:TweetById, {tweetid, userid, tweet})
+    end
+
+    oldFlags = :ets.lookup_element(:Tweets, userid, 3)
+    newFlag = [flag | oldFlags]
+    :ets.insert(:Tweets, {userid, newTweet, newFlag})
+
+    subscribers = :ets.lookup_element(:Followers, userid, 2)
+
+    post_tweet_to_subscribers(tweet, subscribers)
+
+    {:reply, tweet, state}
+  end
+
+  # login callback
+  def handle_call({:login_user, {username, password}}, _from, state) do
     case :ets.lookup(:Users, username) do
       [_] ->
         storedPassword = :ets.lookup_element(:Users, username, 2)
 
         if storedPassword === password do
           {:ok, pid} = GenServer.start_link(Client, username, name: String.to_atom(username))
-          returnValue = true
+
           :ets.insert(:Process_Table, {username, pid})
           # to check if user is logged in or not
           :ets.insert(:UserState, {username, true})
-          {:reply, returnValue, state}
+          {:reply, true, state}
         else
-          {:reply, returnValue, state}
+          {:reply, false, state}
         end
 
       [] ->
-        {:error, returnValue, state}
+        {:error, false, state}
     end
   end
 
   # get tweets callback
-  def handle_call({:get_tweets, user_info}, from, _state) do
-    username = elem(user_info, 0)
-    state = :ets.lookup(:Tweets, username)
-    {:reply, state, from}
+  def handle_call({:get_tweets, {username}}, _from, state) do
+    {:reply, :ets.lookup_element(:Tweets, username, 2), state}
   end
 
-  # post tweet to subscriber
-  def handle_call({:post_tweet_to_subscribers, user_info}, from, state) do
-    tweet = elem(user_info, 1)
-    subscribers = elem(user_info, 2)
-    # add to the table User_Wall for all subscribers
+  # logout
+  def handle_call({:logout, username}, _from, state) do
+    IO.puts("In Server logout")
+
+    if(isUserLoggedIn(username) == true) do
+      :ets.insert(:UserState, {username, false})
+      {:reply, true, state}
+    else
+      {:reply, false, state}
+    end
+  end
+
+  def post_tweet_to_subscribers(tweet, subscribers) do
     Enum.each(subscribers, fn subscriber ->
       [listOfOldTweets] = :ets.lookup(:User_Wall, subscriber)
       oldTweet = elem(listOfOldTweets, 1)
       newTweet = [tweet | oldTweet]
 
-      if Simulator.isUserLoggedIn(subscriber) do
+      if isUserLoggedIn(subscriber) do
         IO.puts("#{subscriber} received tweet #{tweet}")
       end
 
       :ets.insert(:User_Wall, {subscriber, newTweet})
     end)
-
-    {:reply, from, state}
   end
 
-  # logout
+  def process_tweet(tweet) do
+    {:ok, hashtag} = Regex.compile("#[^#@\\s]*")
+    {:ok, mention} = Regex.compile("@[^#@\\s]*")
+    hashtags = Regex.scan(hashtag, tweet)
 
-  def handle_call({:logout, user}, _from, state) do
-    username = elem(user, 0)
-    IO.inspect(username)
+    Enum.each(hashtags, fn [hashtag] -> :ets.insert(:Hashtags, {hashtag, tweet}) end)
 
-    if(Simulator.isUserLoggedIn(username) == true) do
-      pid = :ets.lookup_element(:Process_Table, username, 2)
-      IO.inspect(pid)
-      GenServer.stop(pid, :normal)
-      ret = true
-      {:reply, ret, state}
+    mentions = Regex.scan(mention, tweet)
+
+    Enum.each(mentions, fn [mention] -> :ets.insert(:Mentions, {mention, tweet}) end)
+  end
+
+  # return the logged in state , return true if logged in else returns false
+  def isUserLoggedIn(username) do
+    if(
+      :ets.lookup(:UserState, username) == [] ||
+        :ets.lookup_element(:UserState, username, 2) == false
+    ) do
+      false
     else
-      ret = false
-      {:reply, ret, state}
+      :ets.lookup_element(:UserState, username, 2)
     end
   end
 end

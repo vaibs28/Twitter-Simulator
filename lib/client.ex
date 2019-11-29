@@ -2,89 +2,130 @@ defmodule Client do
   use GenServer
 
   def start_link(opts) do
-    GenServer.start_link(__MODULE__,opts)
+    GenServer.start_link(__MODULE__, opts)
   end
 
-  def process_tweet(tweet) do
-    {:ok, hashtag} = Regex.compile("#[^#@\\s]*")
-    {:ok, mention} = Regex.compile("@[^#@\\s]*")
-    hashtags = Regex.scan(hashtag, tweet)
-
-    Enum.each(hashtags, fn hashtag ->
-      hashtag = List.to_string(hashtag)
-      :ets.insert(:Hashtags, {hashtag, tweet})
-    end)
-
-    mentions = Regex.scan(mention, tweet)
-
-    Enum.each(mentions, fn mention ->
-      mention = List.to_string(mention)
-      :ets.insert(:Mentions, {mention, tweet})
-    end)
+  def init(init_arg) do
+    {:ok, init_arg}
   end
 
-  def handle_call({:tweet, user_info}, from, state) do
-    userid = elem(user_info, 0)
-    tweet = elem(user_info, 1)
-    # check for retweet
-    flag = elem(user_info, 2)
-    [listOfOldTweets] = :ets.lookup(:Tweets, userid)
-    oldTweet = elem(listOfOldTweets, 1)
-    newTweet = [tweet | oldTweet]
-    process_tweet(tweet)
+  # Directly Calls the server
+  def register(username, password) do
+    {isSuccess, message} = GenServer.call(:server, {:register_user, {username, password}})
 
-    if(:ets.first(:TweetById) == :"$end_of_table") do
-      tweetid = 1
-      :ets.insert(:TweetById, {tweetid, userid, tweet})
+    if(isSuccess) do
+      IO.puts("registration successful for #{username}")
     else
-      tweetid = :ets.last(:TweetById)
-      tweetid = tweetid + 1
-      :ets.insert(:TweetById, {tweetid, userid, tweet})
+      IO.puts("#{username} already registered")
     end
 
-    oldFlags = :ets.lookup_element(:Tweets, userid, 3)
-    newFlag = [flag | oldFlags]
-    :ets.insert(:Tweets, {userid, newTweet, newFlag})
-
-    :ets.insert(:User_Wall, {userid, newTweet})
-    subscribers = :ets.lookup_element(:Followers, userid, 2)
-
-    GenServer.call(
-      String.to_atom("server"),
-      {:post_tweet_to_subscribers, {userid, tweet, subscribers}},
-      :infinity
-    )
-
-    {:reply, tweet, state}
+    {isSuccess, message}
   end
 
-  def handle_call({:retweet, tweet_info}, _from, userState) do
-    tweetuser = elem(tweet_info, 0)
-    tweetId = elem(tweet_info, 1)
-    userId = elem(tweet_info, 2)
+  def show_followers(user) do
+    GenServer.call(String.to_atom(user), {:show_followers, user})
+  end
+
+  def query_by_hashtag(hashtag) do
+    GenServer.call(:server, {:query_by_hashtag, hashtag})
+  end
+
+  def query_by_mention(mention) do
+    GenServer.call(:server, {:query_by_mention, mention})
+  end
+
+  def add_follower(username, follower) do
+    GenServer.call(String.to_atom(username), {:add_follower, {username, follower}})
+  end
+
+  def handle_call({:show_followers, username}, _from, state) do
+    {:reply, GenServer.call(:server, {:show_followers, username}), state}
+  end
+
+  def handle_call({:retweet, {tweetuser, tweetId, userId}}, _from, userState) do
     tweet = GenServer.call(String.to_atom(tweetuser), {:get_tweet_by_Id, {tweetId}})
     GenServer.call(String.to_atom(tweetuser), {:tweet, {userId, tweet, "retweet"}})
     {:reply, tweet, userState}
   end
 
-  def handle_call({:get_tweet_by_Id, new_message}, _from, userState) do
-    tweetId = elem(new_message, 0)
-    tweet = :ets.lookup_element(:TweetById, tweetId, 3)
-    {:reply, tweet, userState}
+  def handle_call({:get_tweet_by_Id, {tweetId}}, _from, userState) do
+    {:reply, GenServer.call(:server, {:get_tweet_by_id, tweetId}), userState}
   end
 
-  def handle_call({:add_follower, user_info}, _from, userState) do
-    username = elem(user_info, 0)
-    follower = elem(user_info, 1)
-    [listOfFollowers] = :ets.lookup(:Followers, username)
-    oldFollower = elem(listOfFollowers, 1)
-    newFollower = [follower | oldFollower]
+  def handle_call({:tweet, {userid, tweet, flag}}, _from, state) do
+    {:reply, GenServer.call(:server, {:tweet, {userid, tweet, flag}}, :infinity), state}
+  end
 
-    if :ets.insert(:Followers, {username, newFollower}) == true do
-      returnValue = true
-      {:reply, returnValue, userState}
+  def handle_call({:logout, username}, _from, state) do
+    {:stop, :normal, GenServer.call(:server, {:logout, username}), state}
+  end
+
+  def handle_call({:add_follower, {username, follower}}, _from, state) do
+    if is_user_registered(follower) do
+      {:reply, GenServer.call(:server, {:add_follower, {username, follower}}), state}
     else
-      {:reply, false, userState}
+      {:reply, {false, "#{follower} not registered"}, state}
+    end
+  end
+
+  def tweet(username, tweet) do
+    if Server.isUserLoggedIn(username) == true do
+      GenServer.call(String.to_atom(username), {:tweet, {username, tweet, "tweet"}})
+      IO.puts("#{tweet} posted")
+      true
+    else
+      false
+    end
+  end
+
+  def delete(username) do
+    GenServer.call(:server, {:delete, username})
+  end
+
+  def is_user_registered(username) do
+    GenServer.call(:server, {:is_user_registered, username})
+  end
+
+  def login(username, password) do
+    if is_user_registered(username) == false do
+      {false, "user not registered"}
+    else
+      currentUserState = GenServer.call(:server, {:is_logged_in, username})
+      # not logged in
+      if(currentUserState == false) do
+        ret = GenServer.call(:server, {:login_user, {username, password}})
+
+        if(ret == true) do
+          IO.puts("login successful for #{username}")
+          {true, "Login Successful"}
+        else
+          IO.puts("Password incorrect")
+          {false, "Password incorrect"}
+        end
+      else
+        IO.puts("User #{username} already logged in")
+        {false, "User is already logged in"}
+      end
+    end
+  end
+
+  def retweet(username, tweetuser, tweetid) do
+    GenServer.call(String.to_atom(username), {:retweet, {tweetuser, tweetid, username}})
+  end
+
+  def get_tweets(username) do
+    if(Server.isUserLoggedIn(username) == true) do
+      GenServer.call(:server, {:get_tweets, {username}})
+    else
+      "Not logged in"
+    end
+  end
+
+  def logout(username) do
+    if Process.whereis(String.to_atom(username)) == nil do
+      false
+    else
+      GenServer.call(String.to_atom(username), {:logout, username})
     end
   end
 end
