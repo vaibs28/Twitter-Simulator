@@ -69,7 +69,7 @@ defmodule Client do
   end
 
   def tweet(username, tweet) do
-    if Server.isUserLoggedIn(username) == true do
+    if(Server.isUserLoggedIn(username) == true) do
       GenServer.call(String.to_atom(username), {:tweet, {username, tweet, "tweet"}})
       IO.puts("#{tweet} posted")
       true
@@ -79,7 +79,11 @@ defmodule Client do
   end
 
   def delete(username) do
-    GenServer.call(:server, {:delete, username})
+    if(Client.is_user_registered(username)) do
+      GenServer.call(:server, {:delete, username})
+    else
+      "user not registered"
+    end
   end
 
   def is_user_registered(username) do
@@ -110,7 +114,12 @@ defmodule Client do
   end
 
   def retweet(username, tweetuser, tweetid) do
-    GenServer.call(String.to_atom(username), {:retweet, {tweetuser, tweetid, username}})
+    if(Server.isUserLoggedIn(username)==true) do
+      GenServer.call(String.to_atom(username), {:retweet, {tweetuser, tweetid, username}})
+    else
+      "User not logged in"
+    end
+
   end
 
   def get_tweets(username) do
