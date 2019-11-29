@@ -8,26 +8,26 @@ defmodule Server do
 
   def create_tables() do
     # {username, password}
-    :ets.new(:Users, [:set, :public, :named_table])
+    :ets.new(:Users, [:set, :protected, :named_table])
     # {username, tweets[], retweet_flag[]}
-    :ets.new(:Tweets, [:set, :public, :named_table])
+    :ets.new(:Tweets, [:set, :protected, :named_table])
     # {username, followers[]}
-    :ets.new(:Followers, [:set, :public, :named_table])
+    :ets.new(:Followers, [:set, :protected, :named_table])
     # {username, isLoggedIn(Boolean)}
-    :ets.new(:UserState, [:set, :public, :named_table])
+    :ets.new(:UserState, [:set, :protected, :named_table])
     # {username, tweets[](Tweets of user have subscribed to)}
     # stores username and tweets made by other users to which the user is subscribed to
-    :ets.new(:User_Wall, [:set, :public, :named_table])
+    :ets.new(:User_Wall, [:set, :protected, :named_table])
     # {hashtag, tweets[]}
     # stores hashtags and the tweet
-    :ets.new(:Hashtags, [:set, :public, :named_table])
+    :ets.new(:Hashtags, [:set, :protected, :named_table])
     # {username, tweets[]}
     # stores mentions and the tweet
-    :ets.new(:Mentions, [:set, :public, :named_table])
+    :ets.new(:Mentions, [:set, :protected, :named_table])
     # stores tweetId,username,tweet
-    :ets.new(:TweetById, [:set, :public, :named_table])
-    :ets.new(:Process_Table, [:set, :public, :named_table])
-    :ets.new(:SubscribedTo, [:set, :public, :named_table])
+    :ets.new(:TweetById, [:set, :protected, :named_table])
+    :ets.new(:Process_Table, [:set, :protected, :named_table])
+    :ets.new(:SubscribedTo, [:set, :protected, :named_table])
   end
 
   def handle_call({:show_followers, user}, _from, state) do
