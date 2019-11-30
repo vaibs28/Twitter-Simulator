@@ -1,7 +1,7 @@
 defmodule Simulator do
   use GenServer
 
-  def start_link(num_user, num_msg) do
+  def start_link(num_user, num_msg, per) do
     # start server
     GenServer.start_link(Server, [num_user, num_msg], name: :server)
 
@@ -11,8 +11,29 @@ defmodule Simulator do
     ## Login All Users
     loginAllUsers(num_user)
 
+    s = floor(num_user / 2)
+
+    zipf =
+      Enum.map(
+        Enum.map(1..num_user, fn i -> round(Float.floor(s / (num_user - i + 1))) - 1 end),
+        fn x ->
+          if(x > 0) do
+            x
+          else
+            0
+          end
+        end
+      )
+
     ## Add Subscriptions
-    Enum.each(1..num_user, fn n -> add_followers(n, num_user) end)
+    Enum.each(1..num_user, fn n -> add_followers(Enum.at(zipf, n - 1), n, num_user) end)
+
+    toggle_login_number = trunc(per * num_user * 0.01)
+    IO.puts("Toggle Loging number #{toggle_login_number}")
+
+    Enum.each(Enum.take_random(1..num_user, toggle_login_number), fn n ->
+      GenServer.cast(:"user#{n}", {:start_toggle})
+    end)
 
     ## Generate Tweets for all users
     generate_tweets(num_user, num_msg)
@@ -35,13 +56,15 @@ defmodule Simulator do
     IO.puts("tweets with hashtag_1 : #{inspect(Client.query_by_hashtag("hashtag_1") |> length)}")
   end
 
-  def add_followers(user, num_user) do
+  def add_followers(num, user, num_user) do
     self_id = "user#{user}"
 
-    num = floor(num_user * 20 / 100)
     usernames = Enum.map(1..num_user, fn i -> "user#{i}" end)
-    randoms = Enum.take_random(usernames -- [self_id], num)
-    Enum.each(randoms, fn n -> Client.add_follower(self_id, n) end)
+
+    if num > 0 do
+      randoms = Enum.take_random(usernames -- [self_id], num)
+      Enum.each(randoms, fn n -> Client.add_follower(self_id, n) end)
+    end
   end
 
   def init(state) do

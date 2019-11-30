@@ -5,8 +5,8 @@ defmodule Client do
     GenServer.start_link(__MODULE__, opts)
   end
 
-  def init(_init_arg) do
-    {:ok, []}
+  def init(init_arg) do
+    {:ok, {String.replace(init_arg, "user", ""), []}}
   end
 
   # Directly Calls the server
@@ -65,8 +65,8 @@ defmodule Client do
     {:reply, GenServer.call(:server, {:tweet, {userid, tweet, flag}}, :infinity), state}
   end
 
-  def handle_call({:logout, username}, _from, state) do
-    {:stop, :normal, GenServer.call(:server, {:logout, username}, :infinity), state}
+  def handle_call({:logout, username}, _from, {user, _}) do
+    {:reply, GenServer.call(:server, {:logout, username}, :infinity), {user, []}}
   end
 
   def handle_call({:add_follower, {username, follower}}, _from, state) do
@@ -77,8 +77,8 @@ defmodule Client do
     end
   end
 
-  def handle_call({:subscribed_tweets}, _from, subscribed_tweets) do
-    {:reply, subscribed_tweets, subscribed_tweets}
+  def handle_call({:subscribed_tweets}, _from, {user, subscribed_tweets}) do
+    {:reply, subscribed_tweets, {user, subscribed_tweets}}
   end
 
   def tweet(username, tweet) do
@@ -153,7 +153,26 @@ defmodule Client do
     GenServer.call(String.to_atom(user), {:subscribed_tweets})
   end
 
-  def handle_cast({:notify_tweet, tweet, tweetid}, subscribed_tweets) do
-    {:noreply, [{tweet, tweetid} | subscribed_tweets]}
+  def handle_cast({:notify_tweet, tweet, tweetid}, {user, subscribed_tweets}) do
+    {:noreply, {user, [{tweet, tweetid} | subscribed_tweets]}}
+  end
+
+  def handle_cast({:start_toggle}, state) do
+    IO.puts "Start Toggle"
+    send(self(), {:toggle})
+    {:noreply, state}
+  end
+
+  def handle_info({:toggle}, {user, _tweets}) do
+    if Server.isUserLoggedIn("user#{user}") do
+      IO.puts "Logout in between"
+      GenServer.call(:server, {:logout, "user#{user}"}, :infinity)
+    else
+      IO.puts "Login in between"
+      GenServer.call(:server, {:login_user, {"user#{user}", "pass#{user}"}}, :infinity)
+    end
+
+    Process.send_after(self(), {:toggle}, Enum.random(1..5) * 100)
+    {:noreply, {user, []}}
   end
 end

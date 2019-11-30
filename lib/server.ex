@@ -161,7 +161,11 @@ defmodule Server do
         storedPassword = :ets.lookup_element(:Users, username, 2)
 
         if storedPassword === password do
-          GenServer.start_link(Client, username, name: String.to_atom(username))
+          if Process.whereis(String.to_atom(username)) do
+            # Do nothing
+          else
+            GenServer.start_link(Client, username, name: String.to_atom(username))
+          end
 
           # to check if user is logged in or not
           :ets.insert(:UserState, {username, true})
