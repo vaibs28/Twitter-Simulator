@@ -5,17 +5,34 @@ defmodule Simulator do
     # start server
     GenServer.start_link(Server, [num_user, num_msg], name: :server)
 
+    ## Register Users
     createAndRegisterUsers(num_user)
+
+    ## Login All Users
     loginAllUsers(num_user)
 
+    ## Add Subscriptions
     Enum.each(1..num_user, fn n -> add_followers(n, num_user) end)
 
+    ## Generate Tweets for all users
     generate_tweets(num_user, num_msg)
 
-    for i <- 1..num_user do
-      user = "user#{i}"
-      get_user_state(user)
-    end
+    ### Retweet
+    Enum.each(1..num_user, fn n ->
+      user = "user#{n}"
+      tweets = Client.subscribed_tweets(user)
+
+      if tweets |> length > 0 do
+        {_, tweetid} = Enum.random(tweets)
+        Client.retweet(user, tweetid)
+      end
+    end)
+
+    ### Logout users
+    logout_all_users(num_user)
+
+    ###
+    IO.puts("tweets with hashtag_1 : #{inspect(Client.query_by_hashtag("hashtag_1") |> length)}")
   end
 
   def add_followers(user, num_user) do
@@ -73,7 +90,9 @@ defmodule Simulator do
       user = "user#{i}"
 
       for j <- 1..num_tweets do
-        tweet = "tweet #{j} from user #{user}"
+        tweet =
+          "tweet #{j} from user #{user} ##{Enum.random(["hashtag_1", "hashtag_2", "hastag_3"])}"
+
         Client.tweet(user, tweet)
       end
     end

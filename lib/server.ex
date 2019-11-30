@@ -114,17 +114,19 @@ defmodule Server do
     [listOfOldTweets] = :ets.lookup(:Tweets, userid)
     oldTweet = elem(listOfOldTweets, 1)
     newTweet = [tweet | oldTweet]
-    {all_registered, message} = process_tweet(tweet)
+    {all_registered, messageOrMentions} = process_tweet(tweet)
 
     if all_registered do
-      if(:ets.first(:TweetById) == :"$end_of_table") do
-        tweetid = 1
-        :ets.insert(:TweetById, {tweetid, userid, tweet})
-      else
-        tweetid = :ets.last(:TweetById)
-        tweetid = tweetid + 1
-        :ets.insert(:TweetById, {tweetid, userid, tweet})
-      end
+      tweetid =
+        if(:ets.first(:TweetById) == :"$end_of_table") do
+          1
+        else
+          :ets.last(:TweetById) + 1
+        end
+
+      post_tweet_to_subscribers(tweet, tweetid, messageOrMentions)
+
+      :ets.insert(:TweetById, {tweetid, userid, tweet})
 
       oldFlags = :ets.lookup_element(:Tweets, userid, 3)
       newFlag = [flag | oldFlags]
@@ -132,11 +134,11 @@ defmodule Server do
 
       subscribers = :ets.lookup_element(:Followers, userid, 2)
 
-      post_tweet_to_subscribers(tweet, subscribers)
+      post_tweet_to_subscribers(tweet, tweetid, subscribers)
 
       {:reply, {true, tweet}, state}
     else
-      {:reply, {false, message}, state}
+      {:reply, {false, messageOrMentions}, state}
     end
   end
 
@@ -182,8 +184,6 @@ defmodule Server do
 
   # logout
   def handle_call({:logout, username}, _from, state) do
-    IO.puts("In Server logout")
-
     if(isUserLoggedIn(username) == true) do
       :ets.insert(:UserState, {username, false})
       {:reply, true, state}
@@ -192,7 +192,7 @@ defmodule Server do
     end
   end
 
-  def post_tweet_to_subscribers(tweet, subscribers) do
+  def post_tweet_to_subscribers(tweet, tweetid, subscribers) do
     Enum.each(subscribers, fn subscriber ->
       [listOfOldTweets] = :ets.lookup(:Notifications, subscriber)
       oldTweet = elem(listOfOldTweets, 1)
@@ -201,7 +201,7 @@ defmodule Server do
       if isUserLoggedIn(subscriber) do
         IO.puts("#{subscriber} received tweet #{tweet}")
         :ets.insert(:Notifications, {subscriber, newTweet})
-        GenServer.cast(String.to_atom(subscriber), {:notify_tweet, tweet})
+        GenServer.cast(String.to_atom(subscriber), {:notify_tweet, tweet, tweetid})
       end
     end)
   end
@@ -229,8 +229,6 @@ defmodule Server do
         :ets.insert(:Mentions, {mention, [tweet | previous]})
       end)
 
-      post_tweet_to_subscribers(tweet, mentions)
-
       {:ok, hashtag} = Regex.compile("#[^#@\\s]*")
       hashtags = Enum.uniq(Regex.scan(hashtag, tweet))
 
@@ -247,7 +245,7 @@ defmodule Server do
         :ets.insert(:Hashtags, {hashtag, [tweet | previous]})
       end)
 
-      {true, ""}
+      {true, mentions}
     else
       {false, "All users not registered"}
     end

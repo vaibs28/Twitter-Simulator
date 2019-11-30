@@ -3,6 +3,9 @@ defmodule Proj4Test do
   doctest Proj4
 
   test "register user test" do
+    IO.puts("==========================")
+    IO.puts("Test 1: Register user test")
+    IO.puts("==========================")
     GenServer.start_link(Server, [1, 1], name: :server)
 
     {isSuccess, _message} = Client.register("user1", "pass1")
@@ -17,6 +20,9 @@ defmodule Proj4Test do
   end
 
   test "user already registerd test" do
+    IO.puts("\n===================================")
+    IO.puts("Test 2: User already registerd test")
+    IO.puts("===================================")
     GenServer.start_link(Server, [1, 1], name: :server)
     Client.register("user1", "pass1")
 
@@ -28,6 +34,9 @@ defmodule Proj4Test do
   end
 
   test "delete user test" do
+    IO.puts("\n========================")
+    IO.puts("Test 3: delete user test")
+    IO.puts("========================")
     GenServer.start_link(Server, [1, 1], name: :server)
     Client.register("user1", "pass1")
 
@@ -38,6 +47,9 @@ defmodule Proj4Test do
   end
 
   test "no user to delete test" do
+    IO.puts("\n==============================")
+    IO.puts("Test 4: no user to delete test")
+    IO.puts("==============================")
     GenServer.start_link(Server, [1, 1], name: :server)
     assert :ets.tab2list(:Users) |> length === 0
 
@@ -48,6 +60,9 @@ defmodule Proj4Test do
   end
 
   test "user not present while login test" do
+    IO.puts("\n=========================================")
+    IO.puts("Test 5: user not present while login test")
+    IO.puts("=========================================")
     GenServer.start_link(Server, [1, 1], name: :server)
 
     {success, message} = Client.login("user1", "pass1")
@@ -57,6 +72,9 @@ defmodule Proj4Test do
   end
 
   test "user login successful test" do
+    IO.puts("\n==================================")
+    IO.puts("Test 6: user login successful test")
+    IO.puts("===================================")
     GenServer.start_link(Server, [1, 1], name: :server)
     Client.register("user1", "pass1")
 
@@ -67,6 +85,9 @@ defmodule Proj4Test do
   end
 
   test "user is already logged in test" do
+    IO.puts("\n======================================")
+    IO.puts("Test 7: user is already logged in test")
+    IO.puts("======================================")
     GenServer.start_link(Server, [1, 1], name: :server)
     Client.register("user1", "pass1")
 
@@ -78,6 +99,9 @@ defmodule Proj4Test do
   end
 
   test "login password mismatch test" do
+    IO.puts("\n====================================")
+    IO.puts("Test 8: login password mismatch test")
+    IO.puts("====================================")
     GenServer.start_link(Server, [1, 1], name: :server)
     Client.register("user1", "pass1")
 
@@ -88,6 +112,9 @@ defmodule Proj4Test do
   end
 
   test "logout test" do
+    IO.puts("\n===================")
+    IO.puts("Test 9: logout test")
+    IO.puts("===================")
     GenServer.start_link(Server, [1, 1], name: :server)
     Client.register("user1", "pass1")
     Client.login("user1", "pass1")
@@ -100,6 +127,9 @@ defmodule Proj4Test do
   end
 
   test "not logged in test" do
+    IO.puts("\n====================")
+    IO.puts("Test 10: logout test")
+    IO.puts("====================")
     GenServer.start_link(Server, [1, 1], name: :server)
     Client.register("user1", "pass1")
 
@@ -110,6 +140,9 @@ defmodule Proj4Test do
   end
 
   test "unsuccessful subscribe test" do
+    IO.puts("\n====================================")
+    IO.puts("Test 11: unsuccessful subscribe test")
+    IO.puts("====================================")
     GenServer.start_link(Server, [1, 1], name: :server)
     Client.register("user1", "pass1")
     Client.login("user1", "pass1")
@@ -121,6 +154,9 @@ defmodule Proj4Test do
   end
 
   test "subscribe to a user test" do
+    IO.puts("\n=================================")
+    IO.puts("Test 12: subscribe to a user test")
+    IO.puts("=================================")
     GenServer.start_link(Server, [1, 1], name: :server)
     Client.register("user1", "pass1")
     Client.register("user2", "pass2")
@@ -151,6 +187,9 @@ defmodule Proj4Test do
   end
 
   test "already subscribed test" do
+    IO.puts("\n================================")
+    IO.puts("Test 13: already subscribed test")
+    IO.puts("================================")
     GenServer.start_link(Server, [1, 1], name: :server)
     Client.register("user1", "pass1")
     Client.register("user2", "pass2")
@@ -167,6 +206,9 @@ defmodule Proj4Test do
   end
 
   test "tweet test" do
+    IO.puts("\n===================")
+    IO.puts("Test 14: tweet test")
+    IO.puts("===================")
     GenServer.start_link(Server, [1, 1], name: :server)
 
     Client.register("user1", "pass1")
@@ -183,6 +225,9 @@ defmodule Proj4Test do
   end
 
   test "tweet with hashtag" do
+    IO.puts("\n===========================")
+    IO.puts("Test 15: tweet with hashtag")
+    IO.puts("===========================")
     GenServer.start_link(Server, [1, 1], name: :server)
 
     Client.register("user1", "pass1")
@@ -204,6 +249,9 @@ defmodule Proj4Test do
   end
 
   test "mentioned user not found test" do
+    IO.puts("\n======================================")
+    IO.puts("Test 16: mentioned user not found test")
+    IO.puts("======================================")
     GenServer.start_link(Server, [1, 1], name: :server)
     Client.register("user1", "pass1")
     Client.login("user1", "pass1")
@@ -214,6 +262,9 @@ defmodule Proj4Test do
   end
 
   test "tweet with mention" do
+    IO.puts("\n===========================")
+    IO.puts("Test 17: tweet with mention")
+    IO.puts("===========================")
     GenServer.start_link(Server, [1, 1], name: :server)
 
     Client.register("user1", "pass1")
@@ -245,6 +296,9 @@ defmodule Proj4Test do
   end
 
   test "retweet test" do
+    IO.puts("\n=====================")
+    IO.puts("Test 18: retweet test")
+    IO.puts("=====================")
     GenServer.start_link(Server, [1, 1], name: :server)
 
     Client.register("user1", "pass1")
@@ -271,6 +325,9 @@ defmodule Proj4Test do
   end
 
   test "query by hashtag test" do
+    IO.puts("\n==============================")
+    IO.puts("Test 19: query by hashtag test")
+    IO.puts("==============================")
     GenServer.start_link(Server, [1, 1], name: :server)
 
     Client.register("user1", "pass1")
@@ -288,6 +345,9 @@ defmodule Proj4Test do
   end
 
   test "query by mentions test" do
+    IO.puts("\n===============================")
+    IO.puts("Test 20: query by mentions test")
+    IO.puts("===============================")
     GenServer.start_link(Server, [1, 1], name: :server)
 
     Client.register("user1", "pass1")
@@ -304,6 +364,9 @@ defmodule Proj4Test do
   end
 
   test "query from tweets subscribed to" do
+    IO.puts("\n========================================")
+    IO.puts("Test 21: query from tweets subscribed to")
+    IO.puts("========================================")
     GenServer.start_link(Server, [1, 1], name: :server)
 
     Client.register("user1", "pass1")
@@ -328,6 +391,9 @@ defmodule Proj4Test do
   end
 
   test "notified tweet" do
+    IO.puts("\n=======================")
+    IO.puts("Test 22: notified tweet")
+    IO.puts("=======================")
     GenServer.start_link(Server, [1, 1], name: :server)
 
     Client.register("user1", "pass1")
@@ -340,6 +406,7 @@ defmodule Proj4Test do
     Client.tweet("user1", "Hello World")
     Client.tweet("user1", "Hello World 2")
 
-    assert Client.subscribed_tweets("user2") === ["Hello World 2", "Hello World"]
+    assert Enum.sort(Enum.map(Client.subscribed_tweets("user2"), fn {t, id} -> t end)) ===
+             Enum.sort(["Hello World 2", "Hello World"])
   end
 end

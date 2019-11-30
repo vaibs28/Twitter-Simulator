@@ -77,6 +77,10 @@ defmodule Client do
     end
   end
 
+  def handle_call({:subscribed_tweets}, _from, subscribed_tweets) do
+    {:reply, subscribed_tweets, subscribed_tweets}
+  end
+
   def tweet(username, tweet) do
     if(Server.isUserLoggedIn(username) == true) do
       {success, message} =
@@ -149,12 +153,7 @@ defmodule Client do
     GenServer.call(String.to_atom(user), {:subscribed_tweets})
   end
 
-  def handle_call({:subscribed_tweets}, _from, subscribed_tweets) do
-    {:reply, subscribed_tweets, subscribed_tweets}
-  end
-
-  def handle_cast({:notify_tweet, tweet}, subscribed_tweets) do
-    IO.puts "Tweet is #{inspect tweet}"
-    {:noreply, [tweet | subscribed_tweets]}
+  def handle_cast({:notify_tweet, tweet, tweetid}, subscribed_tweets) do
+    {:noreply, [{tweet, tweetid} | subscribed_tweets]}
   end
 end
