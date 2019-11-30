@@ -61,7 +61,7 @@ defmodule Simulator do
   def logout_all_users(num_user) do
     for i <- 1..num_user do
       user = "user#{i}"
-      ret = GenServer.call(:server, {:logout, {user}})
+      ret = Client.logout(user)
       IO.inspect("#{user} logout successful")
       ret
     end

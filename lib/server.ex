@@ -200,10 +200,8 @@ defmodule Server do
 
       if isUserLoggedIn(subscriber) do
         IO.puts("#{subscriber} received tweet #{tweet}")
-      end
-
-      if(isUserLoggedIn(subscriber) == true) do
         :ets.insert(:Notifications, {subscriber, newTweet})
+        GenServer.cast(String.to_atom(subscriber), {:notify_tweet, tweet})
       end
     end)
   end

@@ -321,7 +321,25 @@ defmodule Proj4Test do
     Client.tweet("user1", "Amazing World")
     Client.tweet("user3", "Hi, This is my World")
 
-    assert Enum.sort(["Hello World", "Amazing World", "Hi, This is my World"]) === Enum.sort(Client.query_by_subscribed_user("user2", "World"))
+    assert Enum.sort(["Hello World", "Amazing World", "Hi, This is my World"]) ===
+             Enum.sort(Client.query_by_subscribed_user("user2", "World"))
+
     assert Client.query_by_subscribed_user("user2", "Amazing") === ["Amazing World"]
+  end
+
+  test "notified tweet" do
+    GenServer.start_link(Server, [1, 1], name: :server)
+
+    Client.register("user1", "pass1")
+    Client.register("user2", "pass2")
+
+    Client.login("user1", "pass1")
+    Client.login("user2", "pass2")
+
+    Client.add_follower("user1", "user2")
+    Client.tweet("user1", "Hello World")
+    Client.tweet("user1", "Hello World 2")
+
+    assert Client.subscribed_tweets("user2") === ["Hello World 2", "Hello World"]
   end
 end
