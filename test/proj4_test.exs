@@ -406,7 +406,7 @@ defmodule Proj4Test do
     Client.tweet("user1", "Hello World")
     Client.tweet("user1", "Hello World 2")
 
-    assert Enum.sort(Enum.map(Client.subscribed_tweets("user2"), fn {t, id} -> t end)) ===
+    assert Enum.sort(Enum.map(Client.subscribed_tweets("user2"), fn {t, _id} -> t end)) ===
              Enum.sort(["Hello World 2", "Hello World"])
   end
 end

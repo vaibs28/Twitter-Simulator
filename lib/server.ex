@@ -26,7 +26,6 @@ defmodule Server do
     :ets.new(:Mentions, [:set, :protected, :named_table])
     # stores tweetId,username,tweet
     :ets.new(:TweetById, [:set, :protected, :named_table])
-    :ets.new(:Process_Table, [:set, :protected, :named_table])
     :ets.new(:SubscribedTo, [:set, :protected, :named_table])
   end
 
@@ -162,9 +161,8 @@ defmodule Server do
         storedPassword = :ets.lookup_element(:Users, username, 2)
 
         if storedPassword === password do
-          {:ok, pid} = GenServer.start_link(Client, username, name: String.to_atom(username))
+          GenServer.start_link(Client, username, name: String.to_atom(username))
 
-          :ets.insert(:Process_Table, {username, pid})
           # to check if user is logged in or not
           :ets.insert(:UserState, {username, true})
           {:reply, true, state}
